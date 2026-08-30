@@ -1,4 +1,13 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { WebSocket as NodeWebSocket } from "ws";
+
+// @supabase/supabase-js's realtime client requires a native `WebSocket` global,
+// which Node only provides unflagged from v22+. Polyfill it here so this works
+// regardless of the Node version the deploy platform actually picks - we don't
+// use realtime subscriptions, but the client is constructed eagerly either way.
+if (typeof globalThis.WebSocket === "undefined") {
+  (globalThis as unknown as { WebSocket: unknown }).WebSocket = NodeWebSocket;
+}
 
 let serviceClient: SupabaseClient | null = null;
 
