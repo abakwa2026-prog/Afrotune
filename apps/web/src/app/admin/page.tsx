@@ -1,5 +1,9 @@
 import { getSupabaseServiceClient } from "@afrotune/db";
 
+// Live founder dashboard - must never be statically prerendered at build time
+// (no Supabase credentials there, and the data would go stale anyway).
+export const dynamic = "force-dynamic";
+
 async function getSummary() {
   const db = getSupabaseServiceClient();
 
