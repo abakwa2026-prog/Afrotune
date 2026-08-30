@@ -98,7 +98,14 @@ export class MetaWhatsAppClient implements WhatsAppMessagingProvider {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async post(body: any): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/messages`, {
+    const endpoint = `${this.baseUrl}/messages`;
+    const messageType = body?.type ?? "unknown";
+    // eslint-disable-next-line no-console
+    console.log(
+      `[whatsapp:meta] outbound send attempted type=${messageType} to=${body?.to ?? "n/a"} endpoint=${endpoint}`,
+    );
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.opts.accessToken}`,
@@ -109,7 +116,16 @@ export class MetaWhatsAppClient implements WhatsAppMessagingProvider {
 
     if (!response.ok) {
       const text = await response.text().catch(() => "<unreadable>");
+      // eslint-disable-next-line no-console
+      console.error(
+        `[whatsapp:meta] outbound send FAILED type=${messageType} to=${body?.to ?? "n/a"} status=${response.status} body=${text}`,
+      );
       throw new Error(`WhatsApp send failed: ${response.status} ${text}`);
     }
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `[whatsapp:meta] outbound send succeeded type=${messageType} to=${body?.to ?? "n/a"} status=${response.status}`,
+    );
   }
 }

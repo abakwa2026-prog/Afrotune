@@ -44,7 +44,12 @@ export async function processIncomingMessage(job: Job<IncomingMessageJob>): Prom
   const env = loadEnv();
   const db = getSupabaseServiceClient();
   const whatsapp = getWhatsAppProvider(env);
-  const { whatsappPhoneNumber, text, interactiveReplyId } = job.data;
+  const { whatsappPhoneNumber, text, messageId, interactiveReplyId } = job.data;
+
+  // eslint-disable-next-line no-console
+  console.log(
+    `[incoming-message] conversation processing started jobId=${job.id} messageId=${messageId} from=${whatsappPhoneNumber} type=${interactiveReplyId ? "interactive" : "text"} whatsappProvider=${env.WHATSAPP_PROVIDER}`,
+  );
 
   const user = await findOrCreateUserByPhone(db, whatsappPhoneNumber);
   const session = await getOrCreateActiveSession(db, user.id);
@@ -150,6 +155,10 @@ export async function processIncomingMessage(job: Job<IncomingMessageJob>): Prom
     missingSlots: missing,
     recentHistory: session.state.history.slice(-8),
   });
+  // eslint-disable-next-line no-console
+  console.log(
+    `[incoming-message] LLM response generated jobId=${job.id} llmProvider=${env.LLM_PROVIDER} restartRequested=${result.restartRequested} confirmationDetected=${result.confirmationDetected}`,
+  );
 
   if (result.restartRequested) {
     // This is the LLM's own (softer, less reliable) restart signal - RESTART_RE

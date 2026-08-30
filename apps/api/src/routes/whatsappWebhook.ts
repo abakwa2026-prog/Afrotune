@@ -45,14 +45,29 @@ export function registerWhatsAppWebhook(app: FastifyInstance, env: Env) {
     // await it because it's fast (single insert + single queue push), but
     // nothing downstream (LLM, generation) ever happens inline here.
     const messages = extractIncomingMessages(request.body);
+    request.log.info(
+      { messageCount: messages.length },
+      "[whatsapp:webhook] inbound webhook received",
+    );
 
     for (const message of messages) {
+      request.log.info(
+        { from: message.from, messageId: message.messageId, type: message.type },
+        "[whatsapp:webhook] inbound message extracted",
+      );
+
       const isNew = await recordWebhookEventIfNew(db, {
         source: "meta",
         eventId: message.messageId,
         payload: message,
       });
-      if (!isNew) continue; // Meta redelivery - already queued once.
+      if (!isNew) {
+        request.log.info(
+          { messageId: message.messageId },
+          "[whatsapp:webhook] duplicate delivery, skipping",
+        );
+        continue; // Meta redelivery - already queued once.
+      }
 
       if (message.type === "text" || message.type === "interactive" || message.type === "button") {
         await queue.add("incoming-message", {
@@ -61,6 +76,15 @@ export function registerWhatsAppWebhook(app: FastifyInstance, env: Env) {
           text: message.text ?? "",
           interactiveReplyId: message.interactiveReplyId,
         });
+        request.log.info(
+          { from: message.from, messageId: message.messageId },
+          "[whatsapp:webhook] enqueued for processing",
+        );
+      } else {
+        request.log.info(
+          { messageId: message.messageId, type: message.type },
+          "[whatsapp:webhook] non-text message type, not enqueued",
+        );
       }
     }
 
