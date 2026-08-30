@@ -304,6 +304,10 @@ async function handleConfirmation(params: {
   if (!songRequest) return;
 
   const outcome = await tryStartGeneration(db, songRequest, params.env);
+  // eslint-disable-next-line no-console
+  console.log(
+    `[confirmation] generation start outcome=${outcome} songRequestId=${songRequestId} creditsRequired=${songRequest.credits_required}`,
+  );
 
   if (outcome === "started") {
     await whatsapp.sendText(
@@ -338,14 +342,34 @@ async function handleConfirmation(params: {
     currencyCode: pack.currency_code,
   });
 
-  const { authorizationUrl } = await paystack.initializeTransaction({
-    email: `${phone}@users.afrotune.app`,
-    amountMinorUnits: pack.price_minor_units,
-    currencyCode: pack.currency_code,
-    reference,
-    metadata: { userId: user.id, creditPackId: pack.id, songRequestId },
-    callbackUrl: `${params.env.APP_URL}/pay/complete?reference=${reference}`,
-  });
+  // eslint-disable-next-line no-console
+  console.log(
+    `[confirmation] paystack initialize attempted reference=${reference} amount=${pack.price_minor_units} currency=${pack.currency_code}`,
+  );
+  let authorizationUrl: string;
+  try {
+    ({ authorizationUrl } = await paystack.initializeTransaction({
+      email: `${phone}@users.afrotune.app`,
+      amountMinorUnits: pack.price_minor_units,
+      currencyCode: pack.currency_code,
+      reference,
+      metadata: { userId: user.id, creditPackId: pack.id, songRequestId },
+      callbackUrl: `${params.env.APP_URL}/pay/complete?reference=${reference}`,
+    }));
+    // eslint-disable-next-line no-console
+    console.log(`[confirmation] paystack initialize succeeded reference=${reference}`);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[confirmation] paystack initialize FAILED reference=${reference}`,
+      err instanceof Error ? err.message : err,
+    );
+    await whatsapp.sendText(
+      phone,
+      "Sorry, I couldn't start the payment for your credits just now - please try again in a moment, or contact support if this keeps happening.",
+    );
+    return;
+  }
 
   const summary = formatBriefSummary(slots);
   await whatsapp.sendCtaUrl(
