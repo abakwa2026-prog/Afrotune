@@ -1,0 +1,31 @@
+{
+  "name": "afrotune",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AfroTune AI - WhatsApp-first AI music creation platform",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:worker": "npm run dev --workspace=apps/worker",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "migrate": "node scripts/run-migrations.mjs",
+    "migrate:seed": "node scripts/run-migrations.mjs --seed",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint . --ext .ts,.tsx"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "tsx": "^4.16.2",
+    "@types/node": "^20.14.10",
+    "eslint": "^8.57.0",
+    "pg": "^8.13.0",
+    "dotenv": "^16.4.5"
+  }
+}

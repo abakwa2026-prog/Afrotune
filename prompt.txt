@@ -1,0 +1,951 @@
+You are working on AfroTune AI.
+
+Before treating this as a coding task, understand the product.
+
+AfroTune is a WhatsApp-first AI music creation platform. The customer is not coming to configure an AI model or fill out a technical form. They are coming with a human idea, story, person, occasion, emotion or musical direction and expect AfroTune to turn that into a finished personalized song.
+
+The core promise is simple:
+
+A user should be able to message AfroTune on WhatsApp and say something like:
+
+“Make a birthday song for my wife Ada. We’ve been married for seven years. She loves Afrobeats. Make it romantic but still something she can dance to, and put some Yoruba inside.”
+
+AfroTune should understand that naturally, extract what it already knows, ask only for genuinely missing information, arrive at a clear internal Song Brief, show the customer the song direction and price, collect payment or use existing credits, generate the music asynchronously, process and store the audio, then send the finished song back through WhatsApp with lyrics, download/share options and a rating experience.
+
+The product should feel like talking to an intelligent music producer, not completing a form.
+
+==================================================
+THE HEART OF AFROTUNE
+==================================================
+
+WhatsApp is the interface, not the product.
+
+The actual heart of AfroTune is the transformation:
+
+Human story/request
+→ conversational understanding
+→ structured Song Brief
+→ African/cultural/music intelligence
+→ composition direction
+→ music generation
+→ finished personalized song.
+
+AfroTune should own the understanding and composition logic.
+
+The external music provider should only be responsible for rendering the resulting music.
+
+The system should never reduce itself to:
+
+WhatsApp → raw user prompt → music API.
+
+The value of AfroTune is what happens between the customer's story and the music model.
+
+==================================================
+CORE PRODUCT EXPERIENCE
+==================================================
+
+The primary experience happens inside WhatsApp.
+
+The user should be free to speak naturally.
+
+Example:
+
+User:
+“I need a wedding song for Tolu and Femi. They met at university, they’ve been together for six years. Make it Afrobeats with some Highlife influence and mostly English.”
+
+AfroTune should understand as much as possible without asking redundant questions.
+
+Internally it may form:
+
+occasion: wedding
+recipients: Tolu and Femi
+relationship/story: met at university, together six years
+genre: Afrobeats
+secondary_style: Highlife
+language: English
+mood: unknown
+voice: unknown
+
+AfroTune then asks only useful follow-up questions such as:
+
+“Do you want it emotional and romantic or more celebratory and danceable?”
+
+The customer should never have to manually answer information AfroTune has already understood.
+
+Structured buttons, WhatsApp Flows and small web views are allowed where they improve the experience, but they are secondary to conversation.
+
+Useful structured interactions may include:
+
+- male / female / surprise-me vocal selection
+- choosing a credit package
+- confirming a song
+- buying credits
+- rating a song
+- selecting between a few options when conversation would be unnecessarily slow.
+
+There should also be an optional “choose everything myself” path in the future, but natural conversation is the main experience.
+
+==================================================
+SONG BRIEF
+==================================================
+
+Every song creation should ultimately produce a structured internal Song Brief.
+
+The exact schema can evolve based on the existing database, but conceptually it represents:
+
+- user/customer
+- country or cultural context
+- occasion
+- recipient name or names
+- relationship
+- story and personal details
+- genre
+- genre variation/fusion
+- language or languages
+- mood
+- vocal preference
+- relevant music/cultural context
+- target duration
+- any required phrases/names
+- price
+- generation status
+- provider configuration
+- final lyrics
+- final audio asset
+- generation metadata.
+
+The Song Brief is owned by AfroTune and should not be coupled to the schema of one music provider.
+
+==================================================
+COUNTRIES, GENRES AND LANGUAGES
+==================================================
+
+The validation market starts with Nigeria, and the existing database already contains Nigerian country, genre, language, instrument and music relationship data.
+
+However, the application must not be architected as “Nigeria software.”
+
+Countries, languages, genres, genre variations, instruments, cultural information and pricing rules should be data-driven.
+
+Adding Cameroon, Ghana, Kenya or another market later should primarily involve new validated data and configuration rather than rewriting the core product.
+
+Do not hard-code country-specific product logic unnecessarily.
+
+The current Nigerian genre foundation includes areas such as:
+
+- Afrobeats
+- Highlife
+- Fuji
+- Juju
+- Apala
+
+Use the existing Supabase data as the starting source of truth.
+
+Do not invent cultural information.
+
+==================================================
+MUSIC INTELLIGENCE
+==================================================
+
+The long-term differentiator is AfroTune’s African Music Intelligence layer.
+
+For this validation build, this does not mean training a proprietary music model.
+
+It means using AfroTune’s curated data and product logic to make the generated song more culturally and musically informed.
+
+Conceptually:
+
+Song Brief
++
+country data
++
+genre data
++
+instruments
++
+rhythm/style characteristics
++
+language context
++
+occasion
++
+mood
++
+personal story
+=
+music/composition specification.
+
+This specification then becomes the input to the actual music-generation provider.
+
+The intelligence layer should remain under AfroTune’s control so that it can improve independently of whichever provider generates audio.
+
+==================================================
+MUSIC GENERATION
+==================================================
+
+The intended Phase 1 provider is ElevenLabs Music, subject to practical quality testing with AfroTune-style songs.
+
+Do not architect the system around ElevenLabs directly.
+
+There should be a music-provider abstraction so AfroTune talks to something conceptually like:
+
+MusicGenerationProvider
+
+with responsibilities such as:
+
+generate
+retrieve/result
+estimate cost
+expose capabilities
+normalize provider errors.
+
+ElevenLabs is the first implementation of that contract.
+
+Another provider should be replaceable later without rewriting the conversation system, payments, database or customer experience.
+
+The provider needs to be tested particularly for:
+
+- Afrobeats
+- Highlife
+- Fuji
+- Juju
+- Apala
+- Nigerian names
+- English
+- Nigerian Pidgin
+- Yoruba
+- Igbo
+- Hausa
+- mixed-language songs
+- male and female vocals
+- birthday
+- wedding
+- love/romantic songs.
+
+Do not assume that a provider being technically multilingual means every Nigerian language or genre sounds culturally convincing.
+
+Quality should be measured.
+
+There is no lyric-approval stage in the main Phase 1 experience.
+
+The flow is intentionally:
+
+conversation
+→ song direction confirmed
+→ payment/credits
+→ generation
+→ finished song.
+
+The customer should experience the magic of describing what they want and receiving the completed result.
+
+Lyrics may still be stored and displayed after generation.
+
+==================================================
+AUDIO PROCESSING
+==================================================
+
+The generated audio should pass through an internal technical processing layer before delivery.
+
+Use FFmpeg for this layer rather than introducing another paid audio-processing SaaS unless there is a strong engineering reason.
+
+This layer is for technical preparation, not unnecessary creative remixing.
+
+It may handle:
+
+- validating that the generated file is healthy
+- inspecting format/codec/duration
+- detecting obvious invalid output
+- trimming accidental excessive silence where appropriate
+- normalizing delivery loudness where necessary
+- generating a WhatsApp/download-friendly MP3
+- extracting duration and useful metadata
+- producing other delivery formats later if required.
+
+Preserve the original provider output.
+
+A song should be able to have both:
+
+original provider asset
+and
+processed delivery asset.
+
+==================================================
+WHATSAPP
+==================================================
+
+Meta WhatsApp Cloud API is the primary customer interface.
+
+The system receives messages through a webhook and sends responses through Meta’s API.
+
+A WhatsApp user’s phone number is their primary identity.
+
+Customers should not be required to create a conventional email/password account simply to create music.
+
+The user identity should link to:
+
+- WhatsApp phone number
+- profile/basic details
+- credit wallet
+- credit ledger
+- preferences
+- songs
+- payments
+- ratings
+- referrals
+- conversation/session state
+- activity history.
+
+The webhook must remain fast.
+
+Long-running AI/music work must never block the WhatsApp webhook.
+
+Meta credentials and identifiers must never be hard-coded.
+
+Relevant configuration belongs in environment variables, including values such as:
+
+META_APP_ID
+META_APP_SECRET
+WHATSAPP_ACCESS_TOKEN
+WHATSAPP_PHONE_NUMBER_ID
+WHATSAPP_BUSINESS_ACCOUNT_ID
+WHATSAPP_VERIFY_TOKEN
+WHATSAPP_API_VERSION
+
+If different naming is more appropriate for the implementation, keep names clear and documented, but all sensitive or deployment-specific configuration must remain outside source code.
+
+==================================================
+CONVERSATIONAL AI
+==================================================
+
+The conversational model is not the authority for financial or database state.
+
+Its job is primarily to:
+
+- understand natural language
+- extract song information
+- understand what the user means
+- decide what information is missing
+- produce natural conversational responses
+- assist with composition/song direction.
+
+Important product/business state remains deterministic backend logic.
+
+For example, the LLM must not decide whether someone has enough credits simply because the conversation suggests they do.
+
+The backend reads the actual ledger.
+
+The conversational layer should preferably produce structured outputs internally when interpreting the user.
+
+It should be robust to messages such as:
+
+“Do something special for my mum”
+“Make it like old Nigerian Highlife”
+“Actually change it to Yoruba”
+“Make it more emotional”
+“Her name is Grace, not Gloria”
+“Start over”
+“How many credits do I have?”
+“I want another one like my last song.”
+
+Conversation state should survive individual webhook requests.
+
+The exact LLM provider should remain configurable.
+
+Environment configuration may include whichever provider is selected, for example:
+
+LLM_PROVIDER
+OPENAI_API_KEY
+OPENAI_MODEL
+
+or equivalent provider variables.
+
+Do not couple core product behavior unnecessarily to one conversational model.
+
+==================================================
+CREDIT WALLET
+==================================================
+
+Every regular user has a credit wallet.
+
+A user should not have to go through Paystack every time they create a song.
+
+They can buy credits and keep them for future usage.
+
+Possible customer experience:
+
+1 credit
+5 credits
+10 credits
+20 credits
+
+with pricing controlled from product/database configuration rather than hard-coded permanently.
+
+Paystack tops up the wallet.
+
+Song generation consumes credits.
+
+Credits should not be represented only as:
+
+users.credit_balance = X
+
+The existing ledger architecture should be respected.
+
+Conceptually:
+
++10 purchased
+-1 generation
+-1 generation
++1 failed-generation refund
++2 referral reward
+
+The visible balance is derived from ledger activity.
+
+Transactions must be auditable and idempotent.
+
+Generation/payment duplication caused by repeated Meta or Paystack webhooks must not double-charge or double-credit users.
+
+==================================================
+PAYSTACK
+==================================================
+
+Paystack is the Phase 1 payment provider.
+
+It is used primarily to buy credits.
+
+Flow:
+
+user chooses credit pack
+→ Paystack payment initialized
+→ user completes payment
+→ backend receives/verifies Paystack event
+→ payment record becomes confirmed
+→ corresponding credit transaction is added
+→ wallet balance increases
+→ pending song flow can continue.
+
+Never credit a wallet merely because payment initialization succeeded.
+
+Verification happens server-side.
+
+Paystack secrets and configuration must remain in environment variables, including values such as:
+
+PAYSTACK_PUBLIC_KEY
+PAYSTACK_SECRET_KEY
+
+Webhook verification must follow Paystack’s actual signing mechanism rather than inventing a separate secret if Paystack does not use one.
+
+==================================================
+GENERATION LIFECYCLE
+==================================================
+
+Music generation is asynchronous.
+
+Conceptually:
+
+song request created
+→ payment/credit confirmed
+→ generation job queued
+→ worker receives job
+→ music intelligence/composition created
+→ music provider called
+→ provider result received
+→ original audio stored
+→ FFmpeg processing
+→ processed audio stored
+→ database updated
+→ WhatsApp user notified.
+
+Useful states may include concepts such as:
+
+draft
+collecting_details
+ready_for_confirmation
+awaiting_payment
+queued
+generating
+processing
+completed
+failed
+moderation_required
+cancelled.
+
+Use whatever state model best fits the existing database after inspection.
+
+Paid/credited requests must not disappear silently.
+
+Failures should be recorded.
+
+Safe retries should exist.
+
+A generation that genuinely fails should be able to restore the consumed credit according to business rules.
+
+==================================================
+QUEUE / WORKER
+==================================================
+
+Long-running generation belongs outside the synchronous API/webhook process.
+
+Use a practical queue/worker architecture suitable for an early SaaS product.
+
+Do not introduce unnecessary infrastructure complexity.
+
+Redis or another lightweight reliable mechanism may be used if appropriate.
+
+Queue configuration must be environment-driven, for example:
+
+REDIS_URL
+
+if Redis is selected.
+
+The system should support:
+
+- queued jobs
+- retries
+- failure recording
+- idempotency
+- safe concurrency
+- recovering jobs that fail unexpectedly.
+
+==================================================
+SUPABASE
+==================================================
+
+There is already a live Supabase project.
+
+It already contains meaningful work, including some combination of:
+
+- country/music seed data
+- genres
+- instruments
+- genre relationships
+- user preferences
+- credit ledger
+- pricing rules
+- generation jobs
+- generation logs
+- moderation queue
+- RLS/security work.
+
+Do not assume this database should be replaced.
+
+The existing schema must be understood and respected.
+
+Modify or extend it where the real product requires it rather than recreating everything simply because a new implementation is being built.
+
+Supabase is the central Phase 1 persistence layer.
+
+It should hold the relational product data such as:
+
+users
+WhatsApp identities
+song requests
+songs
+payments
+credit ledger
+preferences
+ratings
+referrals
+generation state
+provider metadata
+music/cultural configuration
+operational records.
+
+The exact tables should reflect the existing database rather than blindly creating duplicate concepts.
+
+Relevant environment configuration should include:
+
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+
+The service-role key must only be used server-side and must never be exposed to a browser.
+
+==================================================
+SUPABASE STORAGE
+==================================================
+
+Supabase Storage is the initial asset storage layer.
+
+Music should not live as raw database blobs.
+
+The storage design should support assets such as:
+
+original generated audio
+processed delivery audio
+possibly artwork later
+other song-related media if required.
+
+A logical structure could resemble:
+
+songs/{user-or-song-namespace}/{song_id}/original.*
+songs/{user-or-song-namespace}/{song_id}/delivery.mp3
+
+but use the storage structure that is secure, maintainable and compatible with the existing project.
+
+Database rows should reference storage objects.
+
+Access policies should prevent users from arbitrarily reading other customers’ private assets.
+
+Use signed/public URLs intentionally based on the actual customer experience.
+
+Relevant configuration is derived from Supabase environment credentials rather than hard-coded bucket URLs.
+
+Bucket names may be configurable through environment variables if appropriate, for example:
+
+SUPABASE_MUSIC_BUCKET
+
+==================================================
+SMALL WEB EXPERIENCE
+==================================================
+
+AfroTune is not becoming a conventional web-first music SaaS.
+
+WhatsApp remains the product entry point and primary interaction surface.
+
+A small web layer is still valuable where WhatsApp is weak.
+
+Phase 1 web experiences may include:
+
+1. Song page
+
+A shareable/mobile-friendly song page containing:
+
+- song title
+- audio player
+- lyrics
+- metadata
+- download
+- share
+- rating.
+
+2. Credit purchase/payment flow where needed.
+
+3. Founder/admin dashboard.
+
+4. A lightweight “My Songs” experience if it naturally fits development.
+
+Do not make customers leave WhatsApp simply to choose genre, occasion, mood, language and recipient unless a structured flow genuinely makes that particular interaction better.
+
+==================================================
+SONG DELIVERY
+==================================================
+
+When generation completes, the customer should receive a natural WhatsApp notification.
+
+Conceptually:
+
+“Your song is ready 🎉”
+
+Then access to:
+
+- playable audio
+- lyrics
+- download
+- song page
+- rating
+- share
+- create another song.
+
+The system should keep enough song metadata to display:
+
+title
+occasion
+genre
+language
+vocal/style
+duration
+creation date
+recipient where appropriate.
+
+==================================================
+RATINGS AND SHARING
+==================================================
+
+After receiving the song, users should be able to rate it.
+
+Ratings are not decorative.
+
+They are validation data.
+
+Store:
+
+song
+user
+rating
+optional feedback
+timestamp.
+
+Sharing should be easy.
+
+The product should encourage happy users to share AfroTune naturally.
+
+==================================================
+REFERRALS
+==================================================
+
+Phase 1 includes basic referral attribution, not a complete cash-affiliate economy.
+
+A user can have a referral identifier/link.
+
+The system should know:
+
+who referred whom
+whether the referred user registered/interacted
+whether they became a paying customer
+relevant referral events.
+
+The architecture should not make future commission wallets impossible, but cash commissions, KYC, withdrawal systems, fraud engines and bank payouts are not the purpose of this validation build.
+
+==================================================
+USER PREFERENCES / MEMORY
+==================================================
+
+AfroTune should remember useful product preferences naturally over time.
+
+Examples:
+
+preferred genre
+preferred country/context
+preferred language
+preferred vocal direction
+recent occasion
+previous songs.
+
+This should support conversational experiences such as:
+
+“Want another Afrobeats song?”
+
+without forcing the user to manually configure a profile.
+
+Memory must come from real stored product data, not pretend conversational memory.
+
+==================================================
+FOUNDER / ADMIN EXPERIENCE
+==================================================
+
+The founder needs to operate the business without database queries.
+
+The dashboard should be practical rather than overbuilt.
+
+Useful visibility includes:
+
+users
+paying users
+songs
+generation status
+failed jobs
+payments
+credit activity
+ratings
+basic referral activity
+generation time
+provider usage/cost where available
+revenue/basic validation metrics.
+
+The founder should be able to identify failed generations and operational problems.
+
+Do not turn Phase 1 into a huge analytics project.
+
+==================================================
+MODERATION / SAFETY
+==================================================
+
+The existing moderation foundation should be respected.
+
+Some requests may require rejection or manual review.
+
+Examples include sensitive political content, abusive content, impersonation-sensitive requests or other categories the business chooses to restrict.
+
+Voice cloning is not part of Phase 1.
+
+Customers are not uploading someone else’s voice and asking AfroTune to imitate them.
+
+Phase 1 uses provider-supported generated/studio vocal styles.
+
+==================================================
+TECHNICAL OWNERSHIP
+==================================================
+
+All AfroTune infrastructure belongs to the company.
+
+The project should not depend on a developer’s personal accounts.
+
+All externally created services should be created using the company-controlled project email/account wherever possible.
+
+All secrets are supplied through environment variables.
+
+No production secret, private key, API key, password, database credential, phone-number identifier or account-specific configuration should be committed to Git.
+
+The project should include a complete .env.example containing every required variable name with safe placeholder values and explanations where useful.
+
+The actual .env remains private.
+
+Configuration likely includes categories such as:
+
+# Application
+NODE_ENV
+APP_URL
+API_URL
+PORT
+
+# Meta / WhatsApp
+META_APP_ID
+META_APP_SECRET
+WHATSAPP_ACCESS_TOKEN
+WHATSAPP_PHONE_NUMBER_ID
+WHATSAPP_BUSINESS_ACCOUNT_ID
+WHATSAPP_VERIFY_TOKEN
+WHATSAPP_API_VERSION
+
+# Supabase
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_MUSIC_BUCKET
+
+# Paystack
+PAYSTACK_PUBLIC_KEY
+PAYSTACK_SECRET_KEY
+
+# Music provider
+MUSIC_PROVIDER
+ELEVENLABS_API_KEY
+ELEVENLABS_MUSIC_MODEL
+
+# Conversational AI
+LLM_PROVIDER
+OPENAI_API_KEY
+OPENAI_MODEL
+
+# Queue
+REDIS_URL
+
+# Application security
+APP_SECRET
+SIGNED_URL_SECRET or equivalent if the implementation genuinely needs it
+
+# Optional operational configuration
+ADMIN_EMAILS
+SENTRY_DSN or equivalent only if observability is actually used.
+
+Do not create fake environment variables for third-party capabilities that do not exist.
+
+Use the real provider requirements.
+
+==================================================
+EXISTING PROJECT MATERIAL
+==================================================
+
+There are existing AfroTune documents, a prototype and a live Supabase database.
+
+The prototype represents ideas and intended experience, not sacred architecture.
+
+It demonstrates concepts including:
+
+WhatsApp-style song creation
+local pricing
+generation progress
+audio delivery
+lyrics
+ratings
+sharing
+credit concepts
+user preferences.
+
+Use it for context.
+
+Do not blindly reproduce it.
+
+The newer product understanding described here takes priority where the older prototype differs.
+
+In particular:
+
+- natural conversation is preferred over rigid menu questioning
+- there is no required lyrics-approval stage
+- customers can store/buy credits
+- Nigeria is the initial validation market but the architecture is multi-country/data-driven
+- WhatsApp is primary, web is complementary
+- one music provider is implemented initially but provider independence matters.
+
+==================================================
+PHASE 1 OUTCOME
+==================================================
+
+The successful result is not “there is a webhook” or “the dashboard loads.”
+
+The result is this:
+
+A real customer discovers or messages AfroTune on WhatsApp.
+
+They describe the song they want in ordinary language.
+
+AfroTune understands them and has a natural conversation until it has enough information.
+
+It creates an internal Song Brief.
+
+The customer sees a clear summary and price.
+
+If they already have enough credits, they continue immediately.
+
+If they do not, they can buy a credit pack through Paystack.
+
+Their wallet is updated only after verified payment.
+
+The song consumes the appropriate credit.
+
+Generation happens asynchronously.
+
+AfroTune enriches the Song Brief using its music/cultural data.
+
+The music provider generates the track.
+
+The original audio is preserved.
+
+FFmpeg prepares the delivery copy.
+
+The assets are securely stored in Supabase Storage.
+
+The generation record becomes complete.
+
+The customer receives the finished song on WhatsApp.
+
+They can listen, view lyrics, download, rate and share it.
+
+They can return days later, still have unused credits in their wallet, and create another song without being forced through Paystack again.
+
+The founder can open the dashboard and see that customer, their payment, credit activity, song, generation status and rating.
+
+That complete loop is AfroTune Phase 1.
+
+==================================================
+ENGINEERING CHARACTER
+==================================================
+
+This is a validation-stage commercial product, not a disposable prototype.
+
+It should be simple enough to build and operate economically, while being reliable around money, credits and customer songs.
+
+Avoid overengineering.
+
+Also avoid shortcuts that make payment duplication, lost jobs, leaking service-role credentials, broken credit balances or untraceable generation failures likely.
+
+Use the existing system where it is sound.
+
+Challenge it where it is not.
+
+Do not preserve an architecture merely because an older AI-generated PRD suggested it.
+
+The product should be understandable, testable and maintainable by another competent developer after handoff.
+
+The architecture should reflect the actual product:
+
+conversation
+→ Song Brief
+→ music intelligence
+→ payment/credits
+→ asynchronous generation
+→ audio processing
+→ storage
+→ delivery
+→ feedback.
+
+That is AfroTune.
