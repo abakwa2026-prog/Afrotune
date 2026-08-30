@@ -157,7 +157,10 @@ function splitMultipart(body: Buffer, boundary: string): MultipartPart[] {
 
   const parts: MultipartPart[] = [];
   for (let i = 0; i < boundaryOffsets.length - 1; i++) {
-    let segment = body.subarray(boundaryOffsets[i] + marker.length, boundaryOffsets[i + 1]);
+    const start = boundaryOffsets[i];
+    const end = boundaryOffsets[i + 1];
+    if (start === undefined || end === undefined) continue;
+    let segment = body.subarray(start + marker.length, end);
     if (segment[0] === 0x0d && segment[1] === 0x0a) segment = segment.subarray(2);
     if (segment[segment.length - 2] === 0x0d && segment[segment.length - 1] === 0x0a) {
       segment = segment.subarray(0, segment.length - 2);
