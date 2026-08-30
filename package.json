@@ -18,7 +18,7 @@
     "lint": "eslint . --ext .ts,.tsx"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "devDependencies": {
     "typescript": "^5.5.4",

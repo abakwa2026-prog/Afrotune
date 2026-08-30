@@ -200,17 +200,29 @@ message explaining it and that the debited credit is refunded - check `/admin` a
 This repo is an npm-workspaces monorepo, so it deploys as **three Railway services from the
 same GitHub repo** plus a managed Redis - there's no per-service subfolder deploy, since
 `apps/api`/`apps/worker`/`apps/web` all resolve `@afrotune/*` packages through the root
-`node_modules`. Each service's build/start command is pinned by a config file at the repo root
-(`railway.api.json`, `railway.worker.json`, `railway.web.json`) so builds are reproducible
-instead of relying on Railway's auto-detection.
+`node_modules`. Each service's Root Directory stays the repo root, with its build/start command
+set directly in that service's **Settings → Build / Deploy** fields (Railway deprecated
+config-as-code JSON files for any service that hadn't already opted in before 2026-08-28, so
+that path - and the `railway.*.json` files this repo used to ship - no longer works for a
+freshly created project).
 
 1. **Push to GitHub**, then in Railway: **New Project → Deploy from GitHub repo**, picking this
    repo. Railway creates one service; add two more with **+ New → GitHub Repo** pointing at the
    *same* repo (Empty root directory - do not set a per-service Root Directory, since that would
-   break workspace resolution).
-2. For **each** of the 3 services, in **Settings → Config-as-code**, set the Config File Path to
-   the matching file: `railway.api.json`, `railway.worker.json`, or `railway.web.json`. Rename
-   the services accordingly (`api`, `worker`, `web`) so the next steps are unambiguous.
+   break workspace resolution). Rename the three services `api`, `worker`, `web` so the steps
+   below are unambiguous.
+2. For **each** service, in **Settings → Build** / **Settings → Deploy**, set:
+   - `api`: Build Command `npm ci --include=dev`; Start Command
+     `npm run start --workspace=apps/api`; Healthcheck Path `/health`.
+   - `worker`: Build Command `npm ci --include=dev`; Start Command
+     `npm run start --workspace=apps/worker`; no healthcheck path, no public domain (see step 4).
+   - `web`: Build Command `npm ci --include=dev && npm run build --workspace=apps/web`; Start
+     Command `npm run start --workspace=apps/web -- -p $PORT`.
+
+   `--include=dev` matters: Railway sets `NODE_ENV=production` during the build, which makes
+   plain `npm ci` skip devDependencies - `apps/web`'s `next build` needs `typescript`/`@types/*`
+   present to compile, and `apps/api`/`apps/worker` need `tsx` (their actual runtime entrypoint,
+   not just a dev tool) to survive into the deployed container.
 3. **Add Redis**: **+ New → Database → Add Redis** in the same project. On the `api` and
    `worker` services, set `REDIS_URL` to the reference variable `${{Redis.REDIS_URL}}` (Railway
    autocompletes this once Redis exists in the project).
@@ -241,6 +253,13 @@ instead of relying on Railway's auto-detection.
 
 `ffmpeg-static`/`ffprobe-static` (used by `apps/worker` for audio post-processing) bundle their
 own binaries, so no extra system packages need to be installed on Railway.
+
+**Node version matters**: `@supabase/supabase-js`'s realtime client requires the native global
+`WebSocket`, only available unflagged from **Node 22+** - on an older Node it throws
+`Node.js detected but native WebSocket not found` the moment `getSupabaseServiceClient()` runs
+(on `api`, `worker`, and `web` alike, since all three call into `@afrotune/db`). This repo's
+root `package.json` (`engines.node`) and `.nvmrc` both pin `22` so Nixpacks picks the right
+version automatically - don't lower either without checking this still holds.
 
 ---
 
