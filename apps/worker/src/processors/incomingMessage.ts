@@ -102,8 +102,34 @@ interface Ctx {
   user: UserRow;
   session: ConversationSessionRow;
   phone: string;
-  /** Mutable - handleMenuCreate may replace this with a fresh draft's id. */
+  /** Mutable - resumableSongRequestId/handleMenuCreate may null this out or replace it with a fresh draft's id. */
   songRequestId: string | null;
+}
+
+const RESUMABLE_SONG_REQUEST_STATUSES = new Set(["collecting_details", "ready_for_confirmation"]);
+
+/**
+ * A song_request stops being an editable draft the moment it's confirmed
+ * (awaiting_payment/queued/generating/processing/completed/failed/
+ * cancelled/moderation_required) - session.current_song_request_id is never
+ * cleared on that transition, so anything that blindly reuses it (rather
+ * than checking status first) will silently re-merge new free text into an
+ * already-finished request and, if the user then confirms again, re-run
+ * handleConfirmation on it. That collides every idempotency key
+ * (debit/generation-job/BullMQ jobId) with the original run - the debit is
+ * correctly skipped (no double charge), but the generation job is *also*
+ * silently skipped since BullMQ won't re-run a job it already has under
+ * that id, so "creating your song now" gets sent even though nothing new
+ * was actually queued. This is the one and only place that decides whether
+ * an id is still safe to treat as the active draft - every entry point
+ * (free text and handleMenuCreate) must go through it before using
+ * ctx.songRequestId for anything.
+ */
+async function resumableSongRequestId(db: SupabaseClient, songRequestId: string | null): Promise<string | null> {
+  if (!songRequestId) return null;
+  const existing = await getSongRequestById(db, songRequestId);
+  if (existing && RESUMABLE_SONG_REQUEST_STATUSES.has(existing.status)) return songRequestId;
+  return null;
 }
 
 const OCCASION_LABELS: Record<string, string> = {
@@ -146,6 +172,13 @@ const STEP_QUESTION_DESCRIPTION: Record<GuidedStep, string> = {
 
 async function processGuidedFlow(ctx: Ctx, text: string, interactiveReplyId?: string): Promise<void> {
   const { db, whatsapp, user, session, phone } = ctx;
+
+  // A stale current_song_request_id (pointing at an already-confirmed/
+  // completed/failed/cancelled request) must never be silently reused as if
+  // it were still an open draft - see resumableSongRequestId's doc comment.
+  // This has to run before interactive-tap dispatch too, since confirm_song/
+  // edit_song/vocal_*/etc all trust ctx.songRequestId directly.
+  ctx.songRequestId = await resumableSongRequestId(db, ctx.songRequestId);
 
   // ---- Real button/list taps short-circuit everything else. ----
   if (interactiveReplyId) {
@@ -508,23 +541,31 @@ async function renderMainMenu(ctx: Ctx): Promise<void> {
     "Menu",
     [{ rows }],
   );
-  const newState: ConversationState = { ...ctx.session.state, flow: { screen: "main_menu" }, pendingChoice: rows };
+  // Record that the menu was shown, not just its options - the "greet on
+  // true first contact" check in processGuidedFlow gates on history being
+  // empty, so without this a user who replies with free text instead of
+  // tapping (never advancing slots/history any other way) would see this
+  // same greeting on every single message, forever, with their actual reply
+  // silently discarded each time.
+  const history = [...ctx.session.state.history, { role: "assistant" as const, content: "Showed the main menu." }];
+  const newState: ConversationState = {
+    ...ctx.session.state,
+    flow: { screen: "main_menu" },
+    pendingChoice: rows,
+    history,
+  };
   await updateSessionState(ctx.db, ctx.session.id, newState);
   ctx.session.state = newState;
 }
 
 async function handleMenuCreate(ctx: Ctx): Promise<void> {
   const { db, session, user } = ctx;
-  let resumable = false;
-
-  if (ctx.songRequestId) {
-    const existing = await getSongRequestById(db, ctx.songRequestId);
-    if (existing && (existing.status === "collecting_details" || existing.status === "ready_for_confirmation")) {
-      resumable = true;
-    } else {
-      ctx.songRequestId = null;
-    }
-  }
+  // processGuidedFlow already ran this at the top of the turn, but
+  // handleMenuCreate is also reachable via postdelivery_create_another in
+  // the same turn as other state changes, so re-check against ctx's current
+  // value rather than assuming it's still valid.
+  ctx.songRequestId = await resumableSongRequestId(db, ctx.songRequestId);
+  const resumable = ctx.songRequestId !== null;
 
   if (!ctx.songRequestId) {
     const draft = await createDraftSongRequest(db, { userId: user.id, conversationSessionId: session.id });
@@ -976,7 +1017,12 @@ async function processLegacyFlow(args: {
     return;
   }
 
-  let songRequestId = session.current_song_request_id;
+  // A stale current_song_request_id (already confirmed/completed/failed/
+  // cancelled) must never be silently reused as an open draft - see
+  // resumableSongRequestId's doc comment in the guided-flow section above.
+  // This bug predates the guided flow; fixed here identically since this
+  // legacy path still ships as the FLOW_V2_ENABLED=false fallback.
+  let songRequestId = await resumableSongRequestId(db, session.current_song_request_id);
   if (!songRequestId) {
     const draft = await createDraftSongRequest(db, { userId: user.id, conversationSessionId: session.id });
     songRequestId = draft.id;

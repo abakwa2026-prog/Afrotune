@@ -10,6 +10,7 @@ import {
   markSongGenerating,
   markSongCompleted,
   markJobRunning,
+  markJobSucceeded,
   incrementJobAttempt,
   recordJobAttemptError,
   getGenreContext,
@@ -103,6 +104,7 @@ export async function processGeneration(job: Job<GenerationJob>): Promise<void> 
         durationSeconds: probed.durationSeconds,
         providerMetadata: { providerJobId: handle.providerJobId },
       });
+      await markJobSucceeded(db, generationJobId);
       await setSongRequestStatus(db, songRequestId, "completed");
 
       await notifySongReady(db, env, songRequestId, songId);
