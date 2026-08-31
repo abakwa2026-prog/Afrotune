@@ -68,8 +68,16 @@ export class OpenAILLMProvider implements LLMProvider {
     const contextBlock = [
       `Known slots so far: ${JSON.stringify(input.knownSlots)}`,
       `Still missing: ${input.missingSlots.join(", ") || "none"}`,
+      // NOTE: this used to read "...do not try to answer them yourself",
+      // which was written for a different, never-implemented use case
+      // (suppressing intents the backend already fully handles, e.g. a
+      // credit-balance question). The guided WhatsApp flow now uses
+      // intentHints to tell the model what was just asked - the opposite
+      // instruction was silently telling it to skip extracting exactly the
+      // field being asked about (see apps/worker/src/processors/
+      // incomingMessage.ts's buildIntentHints and the guided-flow plan doc).
       input.intentHints?.length
-        ? `Note: the backend already detected these intents and will handle them separately - do not try to answer them yourself: ${input.intentHints.join(", ")}`
+        ? `Context: ${input.intentHints.join(" ")}`
         : "",
     ]
       .filter(Boolean)

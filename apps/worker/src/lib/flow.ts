@@ -47,6 +47,34 @@ export function nextGuidedStep(slots: SongBriefSlots): GuidedStep | null {
   return STEP_ORDER.find((step) => !isStepAnswered(step, slots)) ?? null;
 }
 
+/**
+ * The story step is deliberately soft/open-ended, not a strict
+ * schema-completion gate: a real user answer here can be as short as
+ * "Motherhood" or "Just encouragement for mums", and the LLM's own
+ * extraction can be conservative about terse replies. This guarantees any
+ * substantive free-text reply sent while story is the open step satisfies
+ * it, regardless of what (if anything) the LLM extracted into
+ * slotUpdates.story, so the step can never loop indefinitely.
+ *
+ * - If story is already answered, never overwrite it with a weaker
+ *   fallback (e.g. "Just go with this detail" said after real story content
+ *   was already given earlier) - that prior context already counts.
+ * - Otherwise prefer whatever the LLM did extract.
+ * - Otherwise fall back to the raw message itself, so even a generic
+ *   "just go with this" or a single word still advances the flow rather
+ *   than repeating the same prompt.
+ */
+export function resolveStoryOnFreeText(params: {
+  currentStory?: string;
+  extractedStory?: string;
+  userMessage: string;
+}): string | undefined {
+  if (params.currentStory?.trim()) return params.currentStory;
+  if (params.extractedStory?.trim()) return params.extractedStory;
+  const trimmed = params.userMessage.trim();
+  return trimmed.length > 0 ? trimmed : params.currentStory;
+}
+
 function synthesizeFlow(slots: SongBriefSlots): FlowState {
   const hasAnyAnswer = STEP_ORDER.some((step) => isStepAnswered(step, slots));
   if (!hasAnyAnswer) return { screen: "main_menu" };

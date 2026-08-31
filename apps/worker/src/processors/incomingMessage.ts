@@ -48,7 +48,7 @@ import { getLLMProvider, getWhatsAppProvider, getPaystackClient } from "../lib/p
 import { tryStartGeneration } from "../lib/generationStarter.js";
 import { formatBriefSummary, buildReviewSummary } from "../lib/summary.js";
 import { needsModeration } from "../lib/moderation.js";
-import { resolveFlow, patchFlow, nextGuidedStep } from "../lib/flow.js";
+import { resolveFlow, patchFlow, nextGuidedStep, resolveStoryOnFreeText } from "../lib/flow.js";
 import { loadEnv, type Env } from "../env.js";
 
 const CREDIT_BALANCE_RE = /how many credits|credit balance|my credits|check.*credit/i;
@@ -254,6 +254,17 @@ async function processGuidedFlow(ctx: Ctx, text: string, interactiveReplyId?: st
   }
 
   const mergedSlots = mergeSongBriefSlots(knownSlots, result.slotUpdates);
+
+  // The story step is soft/open-ended - guarantee it completes on any
+  // substantive reply regardless of what the LLM extracted, so it can never
+  // trap the user in a repeat-prompt loop. See resolveStoryOnFreeText.
+  if (flow.step === "story") {
+    mergedSlots.story = resolveStoryOnFreeText({
+      currentStory: knownSlots.story,
+      extractedStory: mergedSlots.story,
+      userMessage: text,
+    });
+  }
 
   const moderation = needsModeration(mergedSlots.story ?? mergedSlots.occasion);
   if (moderation.flagged) {
