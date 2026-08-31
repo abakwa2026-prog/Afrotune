@@ -73,6 +73,21 @@ export async function getLatestCompletedSongForUser(
   return (data as SongRow) ?? null;
 }
 
+export async function listRecentSongsForUser(
+  db: SupabaseClient,
+  userId: string,
+  limit = 5,
+): Promise<SongRow[]> {
+  const { data, error } = await db
+    .from("songs")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data as SongRow[]) ?? [];
+}
+
 export async function markSongGenerating(
   db: SupabaseClient,
   id: string,

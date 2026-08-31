@@ -1,6 +1,25 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SongBriefSlots } from "@afrotune/core";
 
+/** Which guided question is currently open - see apps/worker/src/lib/flow.ts. */
+export type GuidedStep =
+  | "occasion"
+  | "country"
+  | "genre"
+  | "language"
+  | "vocal"
+  | "mood"
+  | "recipient"
+  | "story";
+
+export interface FlowState {
+  screen: "main_menu" | "guided_creation" | "review" | "editing" | "post_delivery";
+  step?: GuidedStep;
+  editingField?: GuidedStep;
+  returnTo?: "review";
+  languageLoopActive?: boolean;
+}
+
 export interface ConversationState {
   slots: SongBriefSlots;
   history: { role: "user" | "assistant"; content: string }[];
@@ -12,6 +31,12 @@ export interface ConversationState {
   // no idea what "1" refers to. Cleared after the next reply is read,
   // whether or not it matched.
   pendingChoice?: { id: string; title: string }[];
+  // Guided-flow position (main menu / creation step / review / editing /
+  // post-delivery). Absent on any session that predates this field - see
+  // apps/worker/src/lib/flow.ts's resolveFlow() for the fallback that
+  // synthesizes one from `slots` so an in-flight session degrades gracefully
+  // instead of crashing on its next message.
+  flow?: FlowState;
 }
 
 export interface ConversationSessionRow {

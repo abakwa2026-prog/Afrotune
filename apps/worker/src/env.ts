@@ -42,6 +42,16 @@ const BaseEnvSchema = z.object({
   // Development-only credit bypass - see apps/worker/src/lib/generationStarter.ts.
   // Double-gated: also requires NODE_ENV !== "production" at the call site.
   DEV_BYPASS_PAYMENT: BooleanFromString,
+
+  // Kill switch for the guided-menu conversation flow (main menu, step-by-step
+  // song creation, review/edit, multi-pack picker). Defaults on; flip to
+  // "false" to instantly revert incoming WhatsApp messages to the legacy
+  // free-form flow without a redeploy, if the new flow misbehaves against
+  // real production traffic. See apps/worker/src/processors/incomingMessage.ts.
+  FLOW_V2_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
 });
 
 const EnvSchema = BaseEnvSchema.superRefine((env, ctx) => {

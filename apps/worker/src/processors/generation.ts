@@ -14,12 +14,15 @@ import {
   recordJobAttemptError,
   getGenreContext,
   getUserById,
+  getOrCreateActiveSession,
+  updateSessionState,
 } from "@afrotune/db";
 import { buildCompositionSpec, type GenreContext, type SongBriefSlots } from "@afrotune/core";
 import { probeAudioFile, processForDelivery } from "@afrotune/providers";
 import type { GenerationJob } from "@afrotune/queue";
 import { getMusicProvider, getWhatsAppProvider } from "../lib/providers.js";
 import { downloadToTempFile } from "../lib/download.js";
+import { patchFlow } from "../lib/flow.js";
 import { loadEnv } from "../env.js";
 
 const POLL_INTERVAL_MS = 5000;
@@ -166,8 +169,21 @@ async function notifySongReady(
     await whatsapp.sendText(user.whatsapp_phone_number, `Lyrics:\n\n${song.lyrics}`);
   }
 
-  await whatsapp.sendText(
+  // Song delivery is via the audio message above (signed URL, works
+  // standalone) - deliberately no web link here, apps/web's /song/[id] page
+  // isn't reliable yet and a broken link undermines trust right after a
+  // successful delivery. See the plan doc for context.
+  const buttons = [
+    { id: "postdelivery_create_another", title: "Create another song" },
+    { id: "postdelivery_menu", title: "Back to menu" },
+  ];
+  await whatsapp.sendButtons(
     user.whatsapp_phone_number,
-    `Listen, download and share anytime: ${env.APP_URL}/song/${song.id}\n\nHow would you rate it? Reply with a number from 1 to 5.`,
+    "How would you rate it? Reply with a number from 1 to 5.\n\nWhat would you like to do next?",
+    buttons,
   );
+
+  const session = await getOrCreateActiveSession(db, songRequest.user_id);
+  const newState = patchFlow(session.state, { screen: "post_delivery" });
+  await updateSessionState(db, session.id, { ...newState, pendingChoice: buttons });
 }

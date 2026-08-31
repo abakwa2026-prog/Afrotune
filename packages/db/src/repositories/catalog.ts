@@ -84,3 +84,54 @@ export async function getPricingRuleForCountry(db: SupabaseClient, countryId?: s
   if (error) throw error;
   return data ?? { credits_per_song: 1 };
 }
+
+export async function listActiveCountries(db: SupabaseClient) {
+  const { data, error } = await db
+    .from("countries")
+    .select("*")
+    .eq("is_active", true)
+    .order("name");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function listGenresForCountry(db: SupabaseClient, countryId: string) {
+  const { data, error } = await db
+    .from("genres")
+    .select("*")
+    .eq("country_id", countryId)
+    .eq("is_active", true)
+    .order("name");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function listLanguagesForCountry(db: SupabaseClient, countryId: string) {
+  const { data, error } = await db
+    .from("country_languages")
+    .select("is_primary, languages(*)")
+    .eq("country_id", countryId);
+  if (error) throw error;
+  return (data ?? [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((row: any) => row.languages)
+    .filter((l: { is_active?: boolean } | null) => l?.is_active);
+}
+
+export async function getCreditPackById(db: SupabaseClient, id: string) {
+  const { data, error } = await db.from("credit_packs").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function findCountryById(db: SupabaseClient, id: string) {
+  const { data, error } = await db.from("countries").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function findGenreById(db: SupabaseClient, id: string) {
+  const { data, error } = await db.from("genres").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data;
+}

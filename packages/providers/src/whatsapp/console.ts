@@ -22,6 +22,17 @@ export class ConsoleWhatsAppClient implements WhatsAppMessagingProvider {
     this.print(to, `${bodyText}\n\n${options}\n\n(Reply with the number or word of your choice.)`);
   }
 
+  async sendList(
+    to: string,
+    bodyText: string,
+    _buttonLabel: string,
+    sections: { title?: string; rows: { id: string; title: string; description?: string }[] }[],
+  ): Promise<void> {
+    const rows = sections.flatMap((s) => s.rows);
+    const options = rows.map((r, i) => `${i + 1}. ${r.title}`).join("\n");
+    this.print(to, `${bodyText}\n\n${options}\n\n(Reply with the number or word of your choice.)`);
+  }
+
   async sendCtaUrl(to: string, bodyText: string, buttonText: string, url: string): Promise<void> {
     this.print(to, `${bodyText}\n\n${buttonText}: ${url}`);
   }

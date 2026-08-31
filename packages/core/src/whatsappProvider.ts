@@ -30,6 +30,23 @@ export interface WhatsAppMessagingProvider {
    */
   sendButtons(to: string, bodyText: string, buttons: { id: string; title: string }[]): Promise<void>;
 
+  /**
+   * Meta's interactive "list" message - for more than 3 options (Meta caps
+   * real button messages at 3; a list message supports up to 10 rows across
+   * sections instead, e.g. picking a country or genre). `buttonLabel` is the
+   * text on the button that opens the list (Meta limit: 20 chars); row
+   * `title` is capped at 24 chars, row `description` at 72. Providers
+   * without a native list widget (e.g. Twilio Sandbox, the console dev
+   * provider) should degrade the same way `sendButtons` does: flatten every
+   * row into one numbered plain-text list.
+   */
+  sendList(
+    to: string,
+    bodyText: string,
+    buttonLabel: string,
+    sections: { title?: string; rows: { id: string; title: string; description?: string }[] }[],
+  ): Promise<void>;
+
   /** A short message plus a link. Providers without a native CTA widget just send the URL inline. */
   sendCtaUrl(to: string, bodyText: string, buttonText: string, url: string): Promise<void>;
 

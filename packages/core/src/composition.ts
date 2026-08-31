@@ -37,6 +37,21 @@ export interface CompositionSpec {
 
 const DEFAULT_DURATION_SECONDS = 120;
 
+/**
+ * Shared by CompositionSpec generation and the WhatsApp review screen so the
+ * two never disagree on what the song is titled. `occasion` must be
+ * non-empty (callers already require it before reaching this point).
+ */
+export function deriveWorkingTitle(params: {
+  occasion: string;
+  recipientName?: string;
+  genreName: string;
+}): string {
+  return params.recipientName
+    ? `${params.occasion} song for ${params.recipientName}`
+    : `${params.genreName} ${params.occasion} song`;
+}
+
 export function buildCompositionSpec(params: {
   songRequestId: string;
   slots: SongBriefSlots;
@@ -83,9 +98,11 @@ export function buildCompositionSpec(params: {
     .filter(Boolean)
     .join(" ");
 
-  const workingTitle = slots.recipientName
-    ? `${slots.occasion} song for ${slots.recipientName}`
-    : `${genre.name} ${slots.occasion} song`;
+  const workingTitle = deriveWorkingTitle({
+    occasion: slots.occasion,
+    recipientName: slots.recipientName,
+    genreName: genre.name,
+  });
 
   return {
     songRequestId,

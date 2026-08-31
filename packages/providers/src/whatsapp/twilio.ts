@@ -49,6 +49,17 @@ export class TwilioWhatsAppClient implements WhatsAppMessagingProvider {
     await this.sendText(to, `${bodyText}\n\n${options}\n\nReply with the number or word of your choice.`);
   }
 
+  async sendList(
+    to: string,
+    bodyText: string,
+    _buttonLabel: string,
+    sections: { title?: string; rows: { id: string; title: string; description?: string }[] }[],
+  ): Promise<void> {
+    const rows = sections.flatMap((s) => s.rows);
+    const options = rows.map((r, i) => `${i + 1}. ${r.title}`).join("\n");
+    await this.sendText(to, `${bodyText}\n\n${options}\n\nReply with the number or word of your choice.`);
+  }
+
   async sendCtaUrl(to: string, bodyText: string, buttonText: string, url: string): Promise<void> {
     await this.sendText(to, `${bodyText}\n\n${buttonText}: ${url}`);
   }

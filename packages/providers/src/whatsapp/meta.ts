@@ -54,6 +54,34 @@ export class MetaWhatsAppClient implements WhatsAppMessagingProvider {
     });
   }
 
+  async sendList(
+    to: string,
+    bodyText: string,
+    buttonLabel: string,
+    sections: { title?: string; rows: { id: string; title: string; description?: string }[] }[],
+  ): Promise<void> {
+    await this.post({
+      messaging_product: "whatsapp",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        body: { text: bodyText },
+        action: {
+          button: buttonLabel.slice(0, 20),
+          sections: sections.map((s) => ({
+            ...(s.title ? { title: s.title } : {}),
+            rows: s.rows.map((r) => ({
+              id: r.id,
+              title: r.title.slice(0, 24),
+              ...(r.description ? { description: r.description.slice(0, 72) } : {}),
+            })),
+          })),
+        },
+      },
+    });
+  }
+
   async sendCtaUrl(to: string, bodyText: string, buttonText: string, url: string): Promise<void> {
     await this.post({
       messaging_product: "whatsapp",
